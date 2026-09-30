@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editable HTML Invoice</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load html2canvas for PNG saving -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- Load jsPDF for PDF saving -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- Load Google Font: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* bg-gray-100 */
+        }
+        
+        /* Provide visual feedback that elements are editable */
+        [contenteditable="true"] {
+            transition: all 0.2s ease-in-out;
+            border-radius: 4px;
+            padding: 2px 4px;
+            margin: -2px -4px; /* offset padding to maintain alignment */
+        }
+
+        [contenteditable="true"]:hover {
+            outline: 1px dashed #cbd5e1; /* border-slate-300 */
+            background-color: #f8fafc;
+        }
+
+        [contenteditable="true"]:focus {
+            outline: 2px solid #3b82f6; /* ring-blue-500 */
+            background-color: #eff6ff; /* bg-blue-50 */
+            cursor: text;
+        }
+
+        /* Hide editable visual cues during printing or saving */
+        .hide-edit-cues [contenteditable="true"]:hover,
+        .hide-edit-cues [contenteditable="true"]:focus,
+        .hide-edit-cues [contenteditable="true"] {
+            outline: none !important;
+            background-color: transparent !important;
+        }
+
+        /* Invoice container to mimic A4 paper slightly */
+        .invoice-paper {
+            width: 100%;
+            max-width: 800px;
+            min-height: 1056px; /* Approx A4 aspect ratio */
+            margin: 0 auto;
+        }
+
+        /* Keep numbers aligned and neat in table cells */
+        th[contenteditable="true"],
+        td[contenteditable="true"] {
+            font-variant-numeric: tabular-nums;
+            font-feature-settings: "tnum" 1;
+            letter-spacing: 0.01em;
+        }
+
+        .total-row-cell {
+            padding-bottom: 0.75rem !important;
+            border-bottom: 1px solid #94a3b8 !important;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8 flex flex-col items-center min-h-screen">
+
+    <!-- Action Toolbar -->
+    <div class="w-full max-w-4xl flex justify-between items-center mb-6 bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+        <div class="text-gray-700 text-sm">
+            <span class="font-semibold">Tip:</span> Click any text in the invoice below to edit it.
+        </div>
+        <div class="flex items-center gap-3">
+            <button onclick="saveAsPNG()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-md shadow-sm transition-colors flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Save as PNG
+            </button>
+            <button onclick="saveAsPDF()" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-6 rounded-md shadow-sm transition-colors flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M7 18.5A2.5 2.5 0 019.5 16H18a2 2 0 012 2v.5A2.5 2.5 0 0117.5 21H6.5A2.5 2.5 0 014 18.5V18a2 2 0 012-2h2.5" />
+                </svg>
+                Download PDF
+            </button>
+        </div>
+    </div>
+
+    <!-- Invoice Container -->
+    <div id="invoice-container" class="invoice-paper bg-white shadow-xl p-8 md:p-12 border border-gray-200">
+        
+        <!-- Header Section -->
+        <div class="flex flex-col md:flex-row justify-between mb-12 border-b border-gray-300 pb-8">
+            
+            <!-- Bill To (Left) -->
+            <div class="mb-6 md:mb-0">
+                <div class="text-sm font-semibold text-gray-500 mb-1" contenteditable="true">Kepada</div>
+                <div class="font-bold text-xl text-gray-800 mb-1" contenteditable="true">AL-BAHJAH PEDULI</div>
+                <div class="text-sm text-gray-600 leading-relaxed">
+                    <div contenteditable="true">Jl. Pangeran Cakrabuana No.179.</div>
+                    <div contenteditable="true">Blok Gudang Air. Sendang. Sumber.</div>
+                    <div contenteditable="true">Kabupaten Cirebon. 45611</div>
+                </div>
+            </div>
+
+            <!-- Invoice Details (Right) -->
+            <div class="text-left md:text-right">
+                <div class="flex justify-start md:justify-end items-center mb-3">
+                    <img src="Turut%20berduka%20cita.png" alt="AL-BAJJAH PEDULI Logo" class="max-h-20 md:max-h-24 w-auto object-contain drop-shadow-sm">
+                </div>
+                <div class="text-4xl font-bold tracking-widest text-blue-900 mb-2 uppercase" contenteditable="true">INVOICE</div>
+                <div class="text-lg font-bold text-gray-800 mb-4" contenteditable="true">AL BAHJAH PEDULI</div>
+                
+                <table class="w-full text-sm text-gray-600 ml-auto border-separate" style="border-spacing: 0 4px;">
+                    <tbody>
+                        <tr>
+                            <td class="pr-4 font-semibold text-gray-700" contenteditable="true">No Invoice</td>
+                            <td id="invoice-number" class="font-medium" contenteditable="true">: 0287/INV/AB-Peduli/IX/2026</td>
+                        </tr>
+                        <tr>
+                            <td class="pr-4 font-semibold text-gray-700" contenteditable="true">Tanggal</td>
+                            <td class="font-medium" contenteditable="true">: 30 September 2026</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Items Table -->
+        <div class="mb-8">
+            <div class="flex justify-end mb-3">
+                <button id="add-item-btn" type="button" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-md shadow-sm transition-colors flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    Tambah Item
+                </button>
+            </div>
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-gray-100 border-y border-gray-300">
+                        <th class="py-3 px-4 font-semibold text-gray-700 w-1/2" contenteditable="true">Item Description</th>
+                        <th class="py-3 px-4 font-semibold text-gray-700 text-center" contenteditable="true">Qty</th>
+                        <th class="py-3 px-4 font-semibold text-gray-700 text-right" contenteditable="true">Unit Price</th>
+                        <th class="py-3 px-4 font-semibold text-gray-700 text-right" contenteditable="true">Total</th>
+                    </tr>
+                </thead>
+                <tbody id="items-body" class="border-b border-gray-300 text-gray-700">
+                    <tr class="border-b border-gray-200">
+                        <td class="py-4 px-4" contenteditable="true">Program Fidyah</td>
+                        <td class="py-4 px-4 text-center" contenteditable="true">1</td>
+                        <td class="py-4 px-4 text-right" contenteditable="true">Rp 40.000.000</td>
+                        <td class="py-4 px-4 text-right font-medium" contenteditable="true">Rp 40.000.000</td>
+                    </tr>
+                </tbody>
+                <!-- Totals -->
+                <tfoot>
+                    <tr>
+                        <td colspan="2" class="py-4"></td>
+                        <td class="total-row-cell py-4 px-4 text-right font-bold text-gray-800 text-lg" contenteditable="true">Total</td>
+                        <td id="items-total-value" class="total-row-cell py-4 px-4 text-right font-bold text-gray-800 text-lg" contenteditable="true">Rp 50.000.000</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <!-- Terbilang Section -->
+        <div class="mb-12 bg-blue-50 p-4 rounded-md border border-blue-100">
+            <span class="font-semibold text-gray-700" contenteditable="true">Terbilang:</span> 
+            <span class="italic text-gray-800 font-medium ml-2" contenteditable="true">Lima Puluh Juta Rupiah</span>
+        </div>
+
+        <!-- Footer Section -->
+        <div class="flex flex-col md:flex-row justify-between items-end mt-8">
+            
+            <!-- Payment Details (Bottom Left) -->
+            <div class="w-full md:w-1/2 mb-8 md:mb-0">
+                <h4 class="font-bold text-gray-800 mb-2 border-b-2 border-blue-900 inline-block pb-1" contenteditable="true">PAYMENT TO:</h4>
+                <table class="text-sm text-gray-700 mt-2 border-separate" style="border-spacing: 0 4px;">
+                    <tbody>
+                        <tr>
+                            <td class="pr-4 font-semibold" contenteditable="true">Account Name</td>
+                            <td contenteditable="true">: Laz Al Bahjah</td>
+                        </tr>
+                        <tr>
+                            <td class="pr-4 font-semibold" contenteditable="true">Bank</td>
+                            <td contenteditable="true">: BANK SYARIAH NASIONAL (BSN)</td>
+                        </tr>
+                        <tr>
+                            <td class="pr-4 font-semibold" contenteditable="true">Account No.</td>
+                            <td contenteditable="true">: 2003799101</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Signatory (Bottom Right) -->
+            <div class="w-full md:w-1/3 text-center">
+                <div class="text-gray-700 mb-1" contenteditable="true">Hormat Kami</div>
+                <div class="font-bold text-gray-800 mb-16" contenteditable="true">AL BAHJAH PEDULI</div>
+                
+                <!-- Signature Space -->
+                
+                <img src="WhatsApp Image 2026-09-30 at 11.54.11 (2).jpeg" alt="Signature" class="mx-auto mb-2 block" style="max-height: 90px; width: auto;">
+                <div class="font-semibold text-gray-800 border-b border-gray-400 inline-block px-4 pb-1 mb-1" contenteditable="true">Nova Nursanti</div>
+                <div class="text-sm text-gray-600" contenteditable="true">(Finance Staff)</div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        function parseCurrency(value) {
+            const clean = String(value || '').replace(/[^\d]/g, '');
+            return Number(clean || 0);
+        }
+
+        function formatCurrency(value) {
+            return new Intl.NumberFormat('id-ID', {
+                style: 'currency',
+                currency: 'IDR',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(value);
+        }
+
+        function recalculateTotals() {
+            const rows = document.querySelectorAll('#items-body tr');
+            let grandTotal = 0;
+
+            rows.forEach(row => {
+                const qtyCell = row.children[1];
+                const priceCell = row.children[2];
+                const totalCell = row.children[3];
+
+                const qty = parseCurrency(qtyCell.textContent);
+                const price = parseCurrency(priceCell.textContent);
+                const total = qty * price;
+
+                totalCell.textContent = formatCurrency(total);
+                grandTotal += total;
+            });
+
+            const totalFooterCell = document.querySelector('#items-total-value');
+            if (totalFooterCell) {
+                totalFooterCell.textContent = formatCurrency(grandTotal);
+            }
+        }
+
+        document.getElementById('add-item-btn')?.addEventListener('click', function () {
+            const tbody = document.getElementById('items-body');
+            const newRow = document.createElement('tr');
+            newRow.className = 'border-b border-gray-200';
+            newRow.innerHTML = `
+                <td class="py-4 px-4" contenteditable="true">Item Baru</td>
+                <td class="py-4 px-4 text-center" contenteditable="true">1</td>
+                <td class="py-4 px-4 text-right" contenteditable="true">Rp 0</td>
+                <td class="py-4 px-4 text-right font-medium" contenteditable="true">Rp 0</td>
+            `;
+            tbody.appendChild(newRow);
+            bindRowEvents(newRow);
+            recalculateTotals();
+        });
+
+        function bindRowEvents(row) {
+            row.querySelectorAll('td[contenteditable="true"]').forEach(cell => {
+                cell.addEventListener('input', recalculateTotals);
+            });
+        }
+
+        document.querySelectorAll('#items-body tr').forEach(bindRowEvents);
+        recalculateTotals();
+
+        function prepareInvoiceForExport(callback) {
+            const invoiceElement = document.getElementById('invoice-container');
+            if (!invoiceElement) return;
+
+            invoiceElement.classList.add('hide-edit-cues');
+            if (document.activeElement) {
+                document.activeElement.blur();
+            }
+
+            setTimeout(() => {
+                callback(invoiceElement);
+            }, 100);
+        }
+
+        function saveAsPNG() {
+            prepareInvoiceForExport((invoiceElement) => {
+                html2canvas(invoiceElement, {
+                    scale: 2,
+                    useCORS: true,
+                    backgroundColor: '#ffffff'
+                }).then(canvas => {
+                    const link = document.createElement('a');
+                    link.style.display = 'none';
+                    document.body.appendChild(link);
+                    link.download = `Invoice_${Date.now()}.png`;
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                    setTimeout(() => link.remove(), 100);
+                    invoiceElement.classList.remove('hide-edit-cues');
+                }).catch(err => {
+                    console.error("Error generating image:", err);
+                    alert("There was an error generating the invoice image.");
+                    invoiceElement.classList.remove('hide-edit-cues');
+                });
+            });
+        }
+
+        function saveAsPDF() {
+            prepareInvoiceForExport((invoiceElement) => {
+                html2canvas(invoiceElement, {
+                    scale: 2,
+                    useCORS: true,
+                    backgroundColor: '#ffffff'
+                }).then(canvas => {
+                    if (!window.jspdf || !window.jspdf.jsPDF) {
+                        alert('PDF library failed to load. Please refresh the page and try again.');
+                        invoiceElement.classList.remove('hide-edit-cues');
+                        return;
+                    }
+
+                    const { jsPDF } = window.jspdf;
+                    const pdf = new jsPDF('p', 'mm', 'a4');
+                    const pageWidth = pdf.internal.pageSize.getWidth();
+                    const pageHeight = pdf.internal.pageSize.getHeight();
+                    const margin = 10;
+                    const ratio = Math.min(
+                        (pageWidth - margin * 2) / canvas.width,
+                        (pageHeight - margin * 2) / canvas.height
+                    );
+
+                    const imgWidth = canvas.width * ratio;
+                    const imgHeight = canvas.height * ratio;
+                    const x = (pageWidth - imgWidth) / 2;
+                    const y = (pageHeight - imgHeight) / 2;
+
+                    const imgData = canvas.toDataURL('image/png');
+                    pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight, undefined, 'FAST');
+                    const invoiceNumber = document.getElementById('invoice-number')?.textContent
+                        .replace(/^:\s*/, '')
+                        .trim()
+                        .replace(/[^a-zA-Z0-9_-]+/g, '_');
+                    pdf.save(`Invoice_${invoiceNumber || Date.now()}.pdf`);
+                    invoiceElement.classList.remove('hide-edit-cues');
+                }).catch(err => {
+                    console.error('Error generating PDF:', err);
+                    alert('There was an error generating the invoice PDF.');
+                    invoiceElement.classList.remove('hide-edit-cues');
+                });
+            });
+        }
+    </script>
+</body>
+</html>
