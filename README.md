@@ -1,27 +1,33 @@
 # Invoice AB Project
 
-This workspace contains a single-page editable invoice generator.
+Aplikasi invoice satu halaman yang bisa diedit dan dipublikasikan sebagai situs statis melalui GitHub Pages.
 
-## Run locally
+## Buka di GitHub Pages
+
+1. Push file proyek ini ke repository GitHub.
+2. Buka **Settings > Pages** pada repository.
+3. Pada **Build and deployment**, pilih **Deploy from a branch**.
+4. Pilih branch utama dan folder **/(root)**, lalu klik **Save**.
+5. Buka URL yang ditampilkan di halaman Pages. `index.html` akan mengarahkan ke invoice.
+
+> GitHub Pages hanya menyajikan file statis; server Node.js tidak diperlukan untuk publikasi. Perubahan invoice akan terlihat setelah di-push ke GitHub.
+
+## Jalankan lokal
 
 ```bash
 npm start
 ```
 
-Then open:
+Buka http://127.0.0.1:3000/.
 
-- http://127.0.0.1:3000/
+## Fitur
 
-The app serves the existing invoice page in `editable_invoice_generator.html`.
+- Teks invoice dapat diedit langsung.
+- Tambah item dan total dihitung otomatis.
+- Unduh invoice sebagai PNG atau PDF.
 
-## Features
+## File utama
 
-- Editable invoice text fields
-- Save invoice as PNG
-- Optimized for print and export
-
-## Files
-
-- `editable_invoice_generator.html` — invoice UI and logic
-- `server.js` — lightweight static server
-- `package.json` — startup scripts
+- `index.html` — halaman masuk GitHub Pages.
+- `editable_invoice_generator.html` — tampilan dan logika invoice.
+- `server.js` — server lokal ringan.
